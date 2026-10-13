@@ -1,5 +1,7 @@
 # Blue Prince QoL
 
+![Blue Prince QoL](docs/images/header.jpg)
+
 Quality-of-life tweaks for **Blue Prince**, as a [MelonLoader](https://github.com/LavaGang/MelonLoader) mod.
 
 Most of the mod removes waiting: shorter animations, fades and lock-outs that you sit through dozens of times a day. It doesn't change any game rules. Every feature can be switched off on its own.
@@ -25,6 +27,14 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 | Cursor guard | Keeps the crosshair visible while an object animates and you can still move. In vanilla it disappears, for example while a Parlor box's key turns. |
 | Move speed | Walking and running are 1.2× faster. Slowdowns, drafting and freezes still work, and step costs don't change. |
 | Music volume | Adds a Music slider under the game's volume control (Settings → Volume). F11 mutes music. Sound effects and ambience aren't affected. |
+
+## Screenshots
+
+![The in-game day, date and time on the HUD in the Entrance Hall](docs/images/hud.jpg)
+
+![The optional run stats line under the clock](docs/images/run-stats.jpg)
+
+![A Music slider under Master in Settings > Volume](docs/images/music.jpg)
 
 ## Installation
 

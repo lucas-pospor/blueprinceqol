@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>BluePrinceQoL</AssemblyName>
+    <RootNamespace>BluePrinceQoL</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>Lucas Pospor</Authors>
+    <Description>Blue Prince QoL: quality-of-life tweaks for Blue Prince (MelonLoader)</Description>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- No local paths in the DLL: symbols embedded, source paths mapped -->
+    <DebugType>embedded</DebugType>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=/BluePrinceQoL</PathMap>
+    <!-- Interop assemblies reference a different mscorlib; silence the noise -->
+    <NoWarn>$(NoWarn);MSB3277;CS8632</NoWarn>
+    <!-- Default Steam install locations; override with -p:GameDir="..." -->
+    <GameDir Condition="'$(GameDir)' == '' And '$(OS)' == 'Windows_NT'">C:\Program Files (x86)\Steam\steamapps\common\Blue Prince</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Blue Prince</GameDir>
+    <CopyToGame Condition="'$(CopyToGame)' == ''">true</CopyToGame>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="$(GameDir)/MelonLoader/net6/MelonLoader.dll" Private="false" />
+    <Reference Include="$(GameDir)/MelonLoader/net6/0Harmony.dll" Private="false" />
+    <Reference Include="$(GameDir)/MelonLoader/net6/Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="$(GameDir)/MelonLoader/net6/Il2CppInterop.Common.dll" Private="false" />
+    <Reference Include="$(GameDir)/MelonLoader/Il2CppAssemblies/*.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- HUD icons: assets/*_1024.png -> raw RGBA (see tools/png2rgba.py), embedded in the DLL -->
+  <ItemGroup>
+    <IconPng Include="$(MSBuildProjectDirectory)/../../assets/sun_icon_1024.png;$(MSBuildProjectDirectory)/../../assets/clock_icon_1024.png" />
+  </ItemGroup>
+  <PropertyGroup>
+    <IconOutDir>$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)icons</IconOutDir>
+    <!-- Copies of the project built elsewhere have no assets/tools: build without icons -->
+    <HaveIcons Condition="Exists('$(MSBuildProjectDirectory)/../../tools/png2rgba.py') And Exists('$(MSBuildProjectDirectory)/../../assets/sun_icon_1024.png')">true</HaveIcons>
+  </PropertyGroup>
+  <Target Name="IconsToRgba" BeforeTargets="PrepareForBuild" Condition="'$(HaveIcons)' == 'true'" Inputs="@(IconPng);$(MSBuildProjectDirectory)/../../tools/png2rgba.py" Outputs="$(IconOutDir)/sun_icon.rgba;$(IconOutDir)/clock_icon.rgba">
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../tools/png2rgba.py&quot; &quot;$(IconOutDir)&quot; 256 @(IconPng->'&quot;%(FullPath)&quot;', ' ')" />
+  </Target>
+  <Target Name="EmbedIcons" BeforeTargets="PrepareForBuild" AfterTargets="IconsToRgba" Condition="'$(HaveIcons)' == 'true'">
+    <ItemGroup>
+      <EmbeddedResource Include="$(IconOutDir)/sun_icon.rgba" LogicalName="sun_icon.rgba" />
+      <EmbeddedResource Include="$(IconOutDir)/clock_icon.rgba" LogicalName="clock_icon.rgba" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyToMods" AfterTargets="Build" Condition="'$(CopyToGame)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)/Mods" />
+    <Message Importance="high" Text="Copied $(TargetFileName) to $(GameDir)/Mods" />
+  </Target>
+
+</Project>

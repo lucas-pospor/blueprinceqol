@@ -3,7 +3,7 @@ using BluePrinceQoL.Features;
 using BluePrinceQoL.Util;
 using MelonLoader;
 
-[assembly: MelonInfo(typeof(BluePrinceQoL.Core), "Blue Prince QoL", "1.0.1", "Lucas Pospor")]
+[assembly: MelonInfo(typeof(BluePrinceQoL.Core), "Blue Prince QoL", "1.1.0", "Lucas Pospor")]
 [assembly: MelonGame("Dogubomb", "BLUE PRINCE")]
 
 namespace BluePrinceQoL;
@@ -36,6 +36,7 @@ public class Core : MelonMod
         _features.Add(new DoorKeySpeedFeature());
         _features.Add(new MusicVolumeFeature());
         _features.Add(new CursorGuardFeature());
+        _features.Add(new DareGameOverFeature());
 
         foreach (var f in _features)
             f.Init();

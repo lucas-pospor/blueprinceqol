@@ -21,6 +21,7 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 | Camera zoom | The camera zooms onto terminals, the Dining Room plate and the Utility Closet fuse box 4× faster, in and out. |
 | Door keys | The key animation on locked doors is 4× faster. The key is still spent exactly once. |
 | End of day | The end-of-day fades and diary reveal are 4× faster. The Save & Continue screens still wait for you. |
+| Dare game over | In Dare mode, the Main Menu button on the Game Over screen shows up after 3 seconds instead of 10, and the fades around it are shorter. Press Space, Enter, Esc or click during the poem to skip ahead to the Game Over screen. |
 | Digging | Shorter fade to black when digging. |
 | Stairs warps | Shorter black screen for the game's *Stairs Skip* option (turn it on under Settings → Motion Assist). |
 | Click unlock | Removes the ~1 s window after pickups, menus and doors where you can walk but can't click. |
@@ -79,6 +80,9 @@ Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The fi
 | `DoorKeySpeed_Speed` | `4` | Key animation speed (1 = vanilla). |
 | `DoorKeySpeed_Hotkeys` / `_UseKey` / `_ExitKey` | `false` / `Return` / `Backspace` | Keyboard USE/EXIT on the lock prompt. |
 | `EndOfDay_Speed` / `_StatsAllAtOnce` / `_MorningFade` | `4` / `false` / `true` | |
+| `DareGameOver_MenuDelay` | `3` | Seconds on the Game Over screen before the Main Menu button appears (vanilla: 10). |
+| `DareGameOver_SkipKeys` | `Space,Return,Escape,Mouse0` | Keys that skip the poem. Comma-separated Unity key names; `Mouse0` is left click. Leave empty to turn skipping off. |
+| `DareGameOver_AutoSkip` | `false` | Always skip the poem, without a key press. |
 | `DigSpeed_Speed` / `_XMarksTheSpot` | `4` / `false` | |
 | `StairsWarp_Speed` / `_FadeIn` | `4` / `true` | |
 | `ClickUnlock_Delay` | `0.1` | Seconds before you can click again after being unfrozen. |

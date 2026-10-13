@@ -449,7 +449,8 @@ public class TerminalFeature : Feature
         m = null;
         try { m = Analyze(pm, fsm); }
         catch (Exception e) { Core.Log.Warning($"[{Name}] could not read menu FSM on '{pm.gameObject.name}': {e.Message}"); }
-        _menus[fsm.Pointer] = m;
+        // An FSM that has never been active may not be fully set up yet: don't cache "not a menu" for it.
+        if (m != null || pm.gameObject.activeInHierarchy) _menus[fsm.Pointer] = m;
         return m;
     }
 
@@ -732,7 +733,8 @@ public class TerminalFeature : Feature
         if (screen == null) return text;
 
         var match = false;
-        foreach (var pm in screen.GetComponentsInChildren<PlayMakerFSM>(false))
+        // Inactive too: the typewriter often types before the screen's arrow menu is switched on.
+        foreach (var pm in screen.GetComponentsInChildren<PlayMakerFSM>(true))
         {
             if (pm == null) continue;
             var m = GetMenu(pm);

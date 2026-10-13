@@ -36,6 +36,8 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 
 ![A Music slider under Master in Settings > Volume](docs/images/music.jpg)
 
+![Numbered options and instant text on a Security terminal](docs/images/terminal.jpg)
+
 ## Installation
 
 1. Install MelonLoader 0.7.3 or later (IL2CPP, x64) into the game folder. The easiest way is the [MelonLoader installer](https://github.com/LavaGang/MelonLoader/releases) pointed at `BLUE PRINCE.exe`. Start the game once so MelonLoader can finish setting up, then close it.

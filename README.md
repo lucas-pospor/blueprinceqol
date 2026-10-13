@@ -20,6 +20,8 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 | Terminals | Instant text and shorter pauses. Arrows/W/S and Enter navigate, keys 1 to 9 pick an option, and Esc/Backspace go back. |
 | Camera zoom | The camera zooms onto terminals, the Dining Room plate and the Utility Closet fuse box 4× faster, in and out. |
 | Door keys | The key animation on locked doors is 4× faster. The key is still spent exactly once. |
+| Secret Garden | The crank sequence in the Secret Garden runs 4× faster: the gear, the camera fades, the arrow and the niche. The arrow and niche positions are saved as normal. |
+| Elevators | Rides in the Boiler Room, Chamber of Mirrors, Foundation and cliff elevators are 3× faster. The whole game runs faster for the length of the ride, so everything stays in sync. Elevator sounds play at normal speed. |
 | End of day | The end-of-day fades and diary reveal are 4× faster. The Save & Continue screens still wait for you. |
 | Dare game over | In Dare mode, the Main Menu button on the Game Over screen shows up after 3 seconds instead of 10, and the fades around it are shorter. Press Space, Enter, Esc or click during the poem to skip ahead to the Game Over screen. |
 | Digging | Shorter fade to black when digging. |
@@ -79,6 +81,9 @@ Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The fi
 | `CameraZoom_OtherObjects` | `false` | Also speed up the same zoom on safes, dartboards, the Room 46 map, shrines and similar objects. |
 | `DoorKeySpeed_Speed` | `4` | Key animation speed (1 = vanilla). |
 | `DoorKeySpeed_Hotkeys` / `_UseKey` / `_ExitKey` | `false` / `Return` / `Backspace` | Keyboard USE/EXIT on the lock prompt. |
+| `SecretGarden_Speed` | `4` | Crank sequence speed (1 = vanilla, at most 10). |
+| `ElevatorSpeed_Speed` | `3` | Elevator ride speed (1 = vanilla, at most 6). |
+| `ElevatorSpeed_BoilerRoom` / `_ChamberofMirrors` / `_Foundation` / `_Cliff` | `true` | Which elevators to speed up. |
 | `EndOfDay_Speed` / `_StatsAllAtOnce` / `_MorningFade` | `4` / `false` / `true` | |
 | `DareGameOver_MenuDelay` | `3` | Seconds on the Game Over screen before the Main Menu button appears (vanilla: 10). |
 | `DareGameOver_SkipKeys` | `Space,Return,Escape,Mouse0` | Keys that skip the poem. Comma-separated Unity key names; `Mouse0` is left click. Leave empty to turn skipping off. |

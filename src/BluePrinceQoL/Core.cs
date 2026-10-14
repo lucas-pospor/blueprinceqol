@@ -3,7 +3,7 @@ using BluePrinceQoL.Features;
 using BluePrinceQoL.Util;
 using MelonLoader;
 
-[assembly: MelonInfo(typeof(BluePrinceQoL.Core), "Blue Prince QoL", "1.3.0", "Lucas Pospor")]
+[assembly: MelonInfo(typeof(BluePrinceQoL.Core), "Blue Prince QoL", "2.0.0", "Lucas Pospor")]
 [assembly: MelonGame("Dogubomb", "BLUE PRINCE")]
 
 namespace BluePrinceQoL;
@@ -40,6 +40,7 @@ public partial class Core : MelonMod
         _features.Add(new SecretGardenFeature());
         _features.Add(new ElevatorSpeedFeature());
         _features.Add(new RotundaFeature());
+        _features.Add(new ModsMenuFeature());
 
         AddDevFeatures(_features);
 

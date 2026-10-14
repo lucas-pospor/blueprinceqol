@@ -12,6 +12,7 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 
 | Feature | What it does |
 |---|---|
+| Mods menu | Settings → MODS in the pause menu lists the mod's options on seven pages, with checkboxes for features and sliders for speeds, in the game's own style. Changes are saved right away. It isn't in the main menu's Settings yet. |
 | HUD | Shows the in-game day, calendar date and time at the top of the screen, in the game's own font with sun and clock icons. It matches the wall clocks. F8 shows or hides it. |
 | Run stats *(hidden by default)* | A second line with today's run: rooms drafted, rank, rooms by colour, dead ends, digs, items, unexplored doors, and a low-steps warning. F10 shows or hides it. |
 | Boot skip | The logo slates at launch take a fraction of a second. |
@@ -60,7 +61,7 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 
 ## Configuration
 
-Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The file is created on the first launch. Each feature has an `<Feature>_Enabled` switch, plus:
+Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The file is created on the first launch. Most of them can also be changed in game: open the pause menu, then Settings → MODS. Each feature has an `<Feature>_Enabled` switch, plus:
 
 | Setting | Default | Meaning |
 |---|---|---|

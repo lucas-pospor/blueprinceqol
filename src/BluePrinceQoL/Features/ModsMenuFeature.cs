@@ -4,6 +4,7 @@ using BluePrinceQoL.Util;
 using Il2Cpp;
 using Il2CppBluePrince.Inputs;
 using Il2CppBluePrince.UI;
+using Il2CppHutongGames.PlayMaker.Actions;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppTMPro;
 using MelonLoader;
@@ -14,7 +15,7 @@ using Object = UnityEngine.Object;
 namespace BluePrinceQoL.Features;
 
 /// <summary>
-/// A "MODS" entry in the pause menu's Settings list that opens an options screen built from the game's own
+/// A "MODS" entry in the Settings list (pause menu and main menu) that opens an options screen built from the game's own
 /// Accessibility screen, so it has the game's fonts, colours, sounds, fades and mouse/keyboard/gamepad controls.
 ///
 /// Built once per scene load (pause menu objects of scene Mount Holly Estate, all found under UI OVERLAY CAM/PAUSE):
@@ -31,7 +32,14 @@ namespace BluePrinceQoL.Features;
 /// If anything is missing or a step throws, the half-built objects are removed and one warning is logged: the config
 /// file and hotkeys keep working.
 ///
-/// Seven pages of checkboxes and sliders. Pause menu only for now.
+/// Main menu (scene Main Menu): the Settings list is MAIN MENU/SETTINGS LAYOUT (rows under "Layout script", a copy of
+/// "Volume Click" becomes MODS, before "Return Click") and the screen is a copy of the scene-root ACCESSIBILITY SUBMENU.
+/// The game's own open/close FSMs are replaced by code doing what they do: open = click sound, Settings list off, the UI
+/// overlay camera becomes Camera.main (selectors raycast through it), screen on; close = black fade (UIMenuManager),
+/// then Main Camera back, the menu frame lines and "Settings" line on, Settings list on (its FSM re-enables its
+/// selector and BACK BUTTON), screen off.
+///
+/// Seven pages of checkboxes and sliders.
 /// </summary>
 public class ModsMenuFeature : Feature
 {
@@ -176,8 +184,22 @@ public class ModsMenuFeature : Feature
         },
     };
 
+    private enum Mode { None, Pause, Main }
+    private Mode _mode;
+
     private GameObject _screen, _entry, _settings, _systemMenu;
     private TMP_Text _entryText;
+
+    // Main menu only
+    private const float MainCloseDelay = 0.6f;  // as the game's screens: black fade, then back to the menu
+    private static readonly Color MainHover = new(0.764f, 0.764f, 0.764f, 1f);
+    private const float MainFont = 2.5f, MainHoverFont = 2.8f, HoverVolume = 0.015f, ClickVolume = 0.15f;
+    private GameObject _mainCam, _overlayCam, _lines, _settingsLine;
+    private TMP_Text _lineText;
+    private string _lineValue;
+    private Color _mainNormal;
+    private AudioClip _hoverClip, _clickClip;
+    private float _mainCloseAt = -1f;
     private float _sceneAt;
     private int _try = -1;
     private int _closeFrame = -1;
@@ -188,9 +210,13 @@ public class ModsMenuFeature : Feature
     {
         if (_saveAt >= 0f) { _saveAt = -1f; MelonPreferences.Save(); }
         _screen = _entry = _settings = _systemMenu = null;
+        _mainCam = _overlayCam = _lines = _settingsLine = null;
+        _lineText = null;
+        _mainCloseAt = -1f;
+        _mode = sceneName switch { "Mount Holly Estate" => Mode.Pause, "Main Menu" => Mode.Main, _ => Mode.None };
         foreach (var p in _pages) { p.Submenu = null; p.Selector = null; p.DescriptionText = null; p.WasOpen = false; }
         _closeFrame = -1;
-        _try = sceneName == "Mount Holly Estate" ? 0 : -1;
+        _try = _mode != Mode.None ? 0 : -1;
         _sceneAt = Time.unscaledTime;
     }
 
@@ -200,9 +226,12 @@ public class ModsMenuFeature : Feature
         {
             var last = _try == BuildTries.Length - 1;
             _try++;
-            TryBuild(last);
+            if (_mode == Mode.Pause) TryBuild(last);
+            else if (_mode == Mode.Main) TryBuildMain(last);
         }
         if (_screen == null) return;
+
+        if (_mainCloseAt >= 0f && Time.unscaledTime >= _mainCloseAt) { _mainCloseAt = -1f; FinishMainClose(); }
 
         // Back from the page list: show the Settings list one frame later, so the same Back press can't reach it.
         if (_closeFrame >= 0 && Time.frameCount >= _closeFrame)
@@ -213,7 +242,8 @@ public class ModsMenuFeature : Feature
         }
 
         // The pause menu was closed or reset (Esc menu's "RESET SYSTEM MENU" doesn't know our screen).
-        if (_screen.activeSelf && _systemMenu != null && _systemMenu.activeInHierarchy) _screen.SetActive(false);
+        if (_mode == Mode.Pause && _screen.activeSelf && _systemMenu != null && _systemMenu.activeInHierarchy)
+            _screen.SetActive(false);
 
         foreach (var p in _pages) UpdatePage(p);
 
@@ -295,13 +325,63 @@ public class ModsMenuFeature : Feature
 
     private void Open()
     {
+        if (_mode == Mode.Main) { OpenMain(); return; }
         if (_screen == null || _settings == null) return;
         if (_entryText != null) _entryText.color = EntryNormal;
         _screen.SetActive(true);
         _settings.SetActive(false);
     }
 
-    private void Close() => _closeFrame = Time.frameCount + 1;
+    private void Close()
+    {
+        if (_mode == Mode.Main) { CloseMain(); return; }
+        _closeFrame = Time.frameCount + 1;
+    }
+
+    // ------------------------------------------------------------------ main menu open/close
+
+    private void OpenMain()
+    {
+        if (_screen == null || _settings == null || _screen.activeSelf) return;
+        Play(_clickClip, ClickVolume);
+        if (_entryText != null) { _entryText.color = _mainNormal; _entryText.fontSize = MainFont; }
+        if (_lineText != null) _lineValue = _lineText.text;  // the Settings list's frame; the game resets it on close
+        _settings.SetActive(false);
+        SetMainCamera(_overlayCam, _mainCam);
+        _screen.SetActive(true);
+    }
+
+    private void CloseMain()
+    {
+        if (_screen == null || _mainCloseAt >= 0f) return;
+        try { _screen.GetComponent<UIMenuManager>()?.RequestBlackFadeIn(); }
+        catch (Exception e) { Core.Log.Msg($"[{Name}] black fade: {e.Message}"); }
+        _mainCloseAt = Time.unscaledTime + MainCloseDelay;
+    }
+
+    private void FinishMainClose()
+    {
+        SetMainCamera(_mainCam, _overlayCam);
+        if (_lines != null) _lines.SetActive(true);
+        if (_lineText != null && _lineValue != null) _lineText.text = _lineValue;
+        if (_settingsLine != null) _settingsLine.SetActive(true);
+        if (_settings != null) _settings.SetActive(true);
+        _screen.SetActive(false);
+    }
+
+    // PlayMaker's SetMainCamera: the old main camera loses the tag, the new one gets it.
+    private static void SetMainCamera(GameObject to, GameObject from)
+    {
+        if (to == null) return;
+        if (from != null && from.CompareTag("MainCamera")) from.tag = "Untagged";
+        to.tag = "MainCamera";
+    }
+
+    private void Play(AudioClip clip, float volume)
+    {
+        if (clip == null || _entry == null) return;
+        AudioSource.PlayClipAtPoint(clip, _entry.transform.position, volume);
+    }
 
     // ------------------------------------------------------------------ build
 
@@ -343,10 +423,135 @@ public class ModsMenuFeature : Feature
         }
     }
 
+    private void TryBuildMain(bool last)
+    {
+        GameObject Root(string name)
+        {
+            foreach (var g in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+                if (g != null && g.name == name) return g;
+            return null;
+        }
+
+        var menu = Root("MAIN MENU");
+        var settings = menu != null ? menu.transform.Find("SETTINGS LAYOUT") : null;
+        var layout = settings?.Find("Layout script");
+        var volume = layout?.Find("Volume Click");
+        var ret = layout?.Find("Return Click");
+        var access = Root("ACCESSIBILITY SUBMENU");
+        _mainCam = Root("Main Camera");
+        _overlayCam = Root("UI OVERLAY CAM");
+        if (volume == null || ret == null || access == null || _mainCam == null || _overlayCam == null)
+        {
+            if (last) Warn("the main menu's Settings list or Accessibility screen wasn't found");
+            return;
+        }
+        _try = BuildTries.Length;
+        if (layout.Find(EntryName + " Click") != null) return;
+
+        _lines = menu.transform.Find("MAINMENU LAYOUT/Lines")?.gameObject;
+        var line = menu.transform.Find("MAINMENU LAYOUT/Lines/Line");
+        _lineText = line != null ? line.GetComponent<TMP_Text>() : null;
+        _settingsLine = menu.transform.Find("VERSION LINE/Settings Text")?.gameObject;
+        FindSounds(volume.gameObject);
+
+        GameObject screen = null, entry = null;
+        try
+        {
+            screen = BuildScreen(access, null);
+            entry = BuildMainEntry(volume.gameObject, ret.gameObject, layout, settings.gameObject);
+            _screen = screen;
+            _entry = entry;
+            _settings = settings.gameObject;
+            Core.Log.Msg($"[{Name}] MODS added to the main menu's Settings");
+        }
+        catch (Exception e)
+        {
+            if (entry != null) Object.Destroy(entry);
+            if (screen != null) Object.Destroy(screen);
+            _screen = _entry = null;
+            Warn($"couldn't build the main menu's MODS screen: {e}");
+        }
+    }
+
+    /// <summary>The hover and click sounds of the game's row (PlaySound actions in its FSM), by volume.</summary>
+    private void FindSounds(GameObject row)
+    {
+        try
+        {
+            foreach (var pm in row.GetComponents<PlayMakerFSM>())
+            foreach (var st in pm.FsmStates)
+            {
+                if (st?.Actions == null) continue;
+                foreach (var a in st.Actions)
+                {
+                    var ps = a?.TryCast<PlaySound>();
+                    var clip = ps?.clip?.Value?.TryCast<AudioClip>();
+                    if (clip == null) continue;
+                    if (ps.volume.Value < 0.05f) _hoverClip ??= clip;
+                    else _clickClip ??= clip;
+                }
+            }
+        }
+        catch (Exception e) { Core.Log.Msg($"[{Name}] menu sounds from FSM: {e.Message}"); }
+
+        if (_hoverClip != null && _clickClip != null) return;
+        foreach (var c in Resources.FindObjectsOfTypeAll<AudioClip>())  // fallback: the clips by name
+        {
+            if (c == null) continue;
+            if (c.name == "Pickup&Clicks66 - Mono") _hoverClip ??= c;
+            else if (c.name == "Pickup&Clicks02 - Mono") _clickClip ??= c;
+        }
+    }
+
+    private GameObject BuildMainEntry(GameObject volume, GameObject ret, Transform layout, GameObject settings)
+    {
+        GameObject entry = null;
+        CloneInactive(volume, EntryName + " Click", go =>
+        {
+            entry = go;
+            Strip(go);
+            TMP_Text label = null;
+            foreach (var t in go.GetComponentsInChildren<TMP_Text>(true))
+                if (t.name.EndsWith(" TEXT")) { label = t; break; }
+            _entryText = label ?? throw new Exception("Volume Click has no label");
+            _entryText.gameObject.name = "MODS TEXT";
+            _entryText.text = EntryName;
+            _mainNormal = _entryText.color;
+            _entryText.fontSize = MainFont;
+
+            var cs = go.GetComponent<ControllerSelectable>() ?? throw new Exception("Volume Click has no ControllerSelectable");
+            cs.TargetFSM = null;
+            if (cs.ExplicitNavigation != null) cs.ExplicitNavigation.UseExplicit = false;
+            cs.OnSelect = Event(() =>
+            {
+                if (_entryText != null) { _entryText.color = MainHover; _entryText.fontSize = MainHoverFont; }
+                Play(_hoverClip, HoverVolume);
+            });
+            cs.OnDeselect = Event(() =>
+            {
+                if (_entryText != null) { _entryText.color = _mainNormal; _entryText.fontSize = MainFont; }
+            });
+            cs.OnUse = Event(Open);
+
+            go.transform.SetParent(layout, false);
+            go.transform.SetSiblingIndex(ret.transform.GetSiblingIndex());
+            go.SetActive(true);
+
+            var vl = layout.GetComponent<UIVerticalLayout>();
+            if (vl != null) { vl.Gameobjects = InsertBefore(vl.Gameobjects, go, ret); vl.RefreshLayout(); }
+
+            var sel = settings.GetComponent<ControllerSelector>();
+            var retSel = ret.GetComponent<ControllerSelectable>();
+            if (sel != null && retSel != null) sel.Selectables = InsertBefore(sel.Selectables, cs, retSel);
+            else Core.Log.Warning($"[{Name}] MODS can't be reached with keyboard/gamepad in the main menu; mouse only");
+        });
+        return entry;
+    }
+
     private void Warn(string msg)
     {
         if (_warned) return;
-        _warned = true;
+        _warned = true;  // once per game session
         Core.Log.Warning($"[{Name}] {msg}. The options are still in UserData/MelonPreferences.cfg.");
     }
 
@@ -399,7 +604,7 @@ public class ModsMenuFeature : Feature
         return ev;
     }
 
-    private GameObject BuildScreen(GameObject access, Transform pause)
+    private GameObject BuildScreen(GameObject access, Transform parent)
     {
         GameObject root = null;
         CloneInactive(access, ScreenName, go =>
@@ -422,7 +627,7 @@ public class ModsMenuFeature : Feature
             Destroy(template);
             BuildPageList(list);
 
-            go.transform.SetParent(pause, false);  // still inactive: opened by the MODS entry
+            go.transform.SetParent(parent, false);  // still inactive: opened by the MODS entry (null = scene root)
             go.transform.localPosition = access.transform.localPosition;
             go.SetActive(false);
         });

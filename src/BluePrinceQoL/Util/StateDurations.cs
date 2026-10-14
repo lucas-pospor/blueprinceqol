@@ -49,6 +49,17 @@ internal sealed class StateDurations
         if (what != null) _cur.Log.Add($"{what} {orig:0.##}s -> {target:0.##}s");
     }
 
+    /// <summary>value = target (any direction, e.g. a speed raised to match shortened durations).</summary>
+    public void Set(FsmFloat v, float target, string what)
+    {
+        if (_cur == null || !IsConst(v)) return;
+        var orig = v.Value;
+        if (Math.Abs(orig - target) < 1e-6f) return;
+        _cur.Floats.Add((v, orig));
+        v.Value = target;
+        if (what != null) _cur.Log.Add($"{what} {orig:0.##} -> {target:0.##}");
+    }
+
     /// <summary>Keeps the changes until the state is left. Returns a log line, or null if nothing changed.</summary>
     public string Commit()
     {

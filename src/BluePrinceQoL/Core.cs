@@ -3,12 +3,12 @@ using BluePrinceQoL.Features;
 using BluePrinceQoL.Util;
 using MelonLoader;
 
-[assembly: MelonInfo(typeof(BluePrinceQoL.Core), "Blue Prince QoL", "1.2.0", "Lucas Pospor")]
+[assembly: MelonInfo(typeof(BluePrinceQoL.Core), "Blue Prince QoL", "1.3.0", "Lucas Pospor")]
 [assembly: MelonGame("Dogubomb", "BLUE PRINCE")]
 
 namespace BluePrinceQoL;
 
-public class Core : MelonMod
+public partial class Core : MelonMod
 {
     internal static MelonLogger.Instance Log;
     internal static MelonPreferences_Category Prefs;
@@ -39,6 +39,9 @@ public class Core : MelonMod
         _features.Add(new DareGameOverFeature());
         _features.Add(new SecretGardenFeature());
         _features.Add(new ElevatorSpeedFeature());
+        _features.Add(new RotundaFeature());
+
+        AddDevFeatures(_features);
 
         foreach (var f in _features)
             f.Init();
@@ -71,6 +74,9 @@ public class Core : MelonMod
         foreach (var f in _features)
             if (f.Enabled) Safe(f, f.OnGUI);
     }
+
+    // Testing helpers, only in builds that include them.
+    static partial void AddDevFeatures(List<Feature> features);
 
     // One broken feature must not take the others (or the game) down with it.
     private static void Safe(Feature f, System.Action a)

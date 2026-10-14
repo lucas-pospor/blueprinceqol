@@ -11,3 +11,6 @@ __pycache__/
 .idea/
 *.user
 .DS_Store
+
+# Local testing helpers, never published
+src/BluePrinceQoL/Dev/

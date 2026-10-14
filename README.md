@@ -35,6 +35,8 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 
 ## Screenshots
 
+![The Display page of the Mods menu, with a description of the selected option on the right](docs/images/mods-menu.jpg)
+
 ![The in-game day, date and time on the HUD in the Entrance Hall](docs/images/hud.jpg)
 
 ![The optional run stats line under the clock](docs/images/run-stats.jpg)

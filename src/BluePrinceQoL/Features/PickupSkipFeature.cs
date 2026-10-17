@@ -44,6 +44,7 @@ public class PickupSkipFeature : Feature
     private MelonPreferences_Entry<bool> _skipCards;
     private MelonPreferences_Entry<bool> _skipExtraCards;
     private MelonPreferences_Entry<bool> _skipShopCards;
+    private MelonPreferences_Entry<float> _cardExitSpeed;
     private MelonPreferences_Entry<string> _unfreezeKeyPref;
     private KeyCode _unfreezeKey = KeyCode.None;
     private const string PlayerPath = "__SYSTEM/FPS Home/FPSController - Prince";
@@ -75,6 +76,7 @@ public class PickupSkipFeature : Feature
         public bool Item;
         public List<FsmFloat> DigWaits;              // Dig Engine: Waits around a dig card, shortened to one frame
         public bool DigClick;                        // Dig Engine: polls for the same click as the dig card
+        public List<FsmFloat> ExitTweens;            // card state entered by "click": slide-off tween times
     }
     private static readonly Plan Nothing = new();
 
@@ -84,6 +86,7 @@ public class PickupSkipFeature : Feature
         public HashSet<string> ItemChain;   // null = not an item FSM
         public int CardCat;                 // > 0 = card FSM
         public Dictionary<string, int> DigRoles; // Dig Engine companion states (see DigRoles), null = not computed
+        public HashSet<string> ClickTargets;     // card FSM: states entered by "click" (the card leaving)
     }
     private const int DigResult = 1, DigClickState = 2, DigGrantWait = 3;
 
@@ -120,6 +123,9 @@ public class PickupSkipFeature : Feature
             "Auto-dismiss the 'You Bought X' cards in shops.");
         _skipExtraCards = Core.Prefs.CreateEntry($"{Name}_SkipDigShopCards", false, "PickupSkip: skip dig cards",
             "Also auto-dismiss 'You Dug Up X' cards; the Dig Engine gets the same click, so dug keys/coins/gems arrive at once (less tested). Pref name kept for old configs.");
+        _cardExitSpeed = Core.Prefs.CreateEntry($"{Name}_CardExitSpeed", 4f, "PickupSkip: card exit speed",
+            "For cards that are not skipped (e.g. 'You Dug Up' with SkipDigShopCards off): how many times faster the card " +
+            "slides off the screen after you click it (1 = vanilla 1 s, at most 10). The card still waits for your click.");
         _unfreezeKeyPref = Core.Prefs.CreateEntry($"{Name}_UnfreezeKey", "F9", "PickupSkip: emergency unfreeze key",
             "Sends the player the same 'UnFreeze' a closing card sends, in case a skip leaves you unable to move. 'None' disables.");
         if (!Enum.TryParse(_unfreezeKeyPref.Value, true, out _unfreezeKey)) _unfreezeKey = KeyCode.None;
@@ -268,6 +274,19 @@ public class PickupSkipFeature : Feature
             if (plan.CardCat > 0 && !_loggedCard) { _loggedCard = true; Core.Log.Msg($"[{Name}] auto-dismissing card ({state.Fsm?.GameObject?.name})"); }
         }
 
+        // A card the player clicks away (not skipped): its slide off the screen is shortened. The tween reads
+        // its time on entry; the state still ends when the tween does, then unfreezes as in vanilla.
+        if (plan.ExitTweens != null && !presentation)
+        {
+            var sp = _cardExitSpeed.Value;
+            if (!float.IsNaN(sp) && sp > 1f)
+            {
+                var k = 1f / Math.Min(sp, 10f);
+                foreach (var f in plan.ExitTweens)
+                    if (f.Value > 0f) { P().Floats.Add((f, f.Value)); f.Value = Math.Max(f.Value * k, 0.05f); }
+            }
+        }
+
         if (plan.FreezeZero != null)
             foreach (var (f, cat) in plan.FreezeZero)
             {
@@ -376,6 +395,13 @@ public class PickupSkipFeature : Feature
                 }
             }
             if (inChain) P().Item = true;
+            if (info.CardCat > 0 && info.ClickTargets != null && info.ClickTargets.Contains(state.Name))
+                foreach (var a in actions)
+                {
+                    if (a == null || !a.Enabled) continue;
+                    var t = a.TryCast<iTweenMoveTo>()?.time ?? a.TryCast<iTweenScaleTo>()?.time;
+                    if (IsConst(t) && t.Value > 0f) (P().ExitTweens ??= new()).Add(t);
+                }
             if (info.CardCat > 0)
             {
                 P().CardCat = info.CardCat;
@@ -523,6 +549,14 @@ public class PickupSkipFeature : Feature
         _fsms[ptr] = info;
         info.CardCat = CardCategory(fsm.GameObject);
         if (info.CardCat == CatNone) info.ItemChain = ItemChain(fsm);
+        else
+        {
+            info.ClickTargets = new HashSet<string>();
+            foreach (var st in fsm.States)
+                if (st?.Transitions != null)
+                    foreach (var t in st.Transitions)
+                        if (t?.EventName == "click" && !string.IsNullOrEmpty(t.ToState)) info.ClickTargets.Add(t.ToState);
+        }
         return info;
     }
 

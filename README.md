@@ -13,23 +13,25 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 | Feature | What it does |
 |---|---|
 | Mods menu | Settings → MODS, in both the main menu and the pause menu, lists the mod's options on seven pages, with checkboxes for features and sliders for speeds, in the game's own style. Changes are saved right away. |
+| Quit without saving | A QUIT WITHOUT SAVING option under SAVE & QUIT in the pause menu. After a confirmation it returns to the main menu without saving, so Continue starts the same day again. Everything from that day is lost, including permanent unlocks. Steam achievements stay unlocked. |
 | HUD | Shows the in-game day, calendar date and time at the top of the screen, in the game's own font with sun and clock icons. It matches the wall clocks. F8 shows or hides it. |
 | Run stats *(hidden by default)* | A second line with today's run: rooms drafted, rank, rooms by colour, dead ends, digs, items, unexplored doors, and a low-steps warning. F10 shows or hides it. |
-| Boot skip | The logo slates at launch take a fraction of a second. |
+| Boot skip | The Dogubomb and Raw Fury logos are skipped at launch. |
 | Intro skip | No camera glide at the start of each day; you have control at the gate straight away. |
-| Pickup skip | Item pickup animations and the "You Found …" / "You Bought …" cards are skipped. Items are granted as normal. F9 is an emergency unfreeze in case you ever get stuck. |
+| Pickup skip | Item pickup animations and the "You Found …" / "You Bought …" cards are skipped. Items are granted as normal. F9 is an emergency unfreeze in case you ever get stuck. Cards you keep (such as "You Dug Up …") slide off the screen 4× faster when you click them. |
 | Terminals | Instant text and shorter pauses. Arrows/W/S and Enter navigate, keys 1 to 9 pick an option, and Esc/Backspace go back. |
-| Camera zoom | The camera zooms onto terminals, the Dining Room plate and the Utility Closet fuse box 4× faster, in and out. |
+| Camera zoom | The camera zooms onto terminals, wall safes, the Watch Tower letter lock, the Dining Room plate and the Utility Closet fuse box 4× faster, in and out. When you open a safe or pull the Drawing Room candlestick, the door and panel animations are 4× faster too. |
 | Door keys | The key animation on locked doors is 4× faster. The key is still spent exactly once. |
 | Secret Garden | The crank sequence in the Secret Garden runs 4× faster: the gear, the camera fades, the arrow and the niche. The arrow and niche positions are saved as normal. |
 | Elevators | Rides in the Boiler Room, Chamber of Mirrors, Foundation and cliff elevators are 3× faster. The whole game runs faster for the length of the ride, so everything stays in sync. Elevator sounds play at normal speed. |
 | Rotunda | The Rotunda turns 4× faster, and the gears turn with it. The turning sound fades out as the room stops. |
+| Workshop | The black screen while an item is assembled at the Workshop table is 4× shorter, and the assembly sound fades out with it. |
 | End of day | The end-of-day fades and diary reveal are 4× faster. The Save & Continue screens still wait for you. |
 | Dare game over | In Dare mode, the Main Menu button on the Game Over screen shows up after 3 seconds instead of 10, and the fades around it are shorter. Press Space, Enter, Esc or click during the poem to skip ahead to the Game Over screen. |
 | Digging | Shorter fade to black when digging. |
 | Stairs warps | Shorter black screen for the game's *Stairs Skip* option (turn it on under Settings → Motion Assist). |
-| Click unlock | Removes the ~1 s window after pickups, menus and doors where you can walk but can't click. |
-| Cursor guard | Keeps the crosshair visible while an object animates and you can still move. In vanilla it disappears, for example while a Parlor box's key turns. |
+| Click unlock | Removes the ~1 s window after pickups, menus and doors where you can walk but can't click, and the short one after leaving a safe or terminal. |
+| Cursor guard | Keeps the crosshair visible while an object animates and you can still move. In vanilla it disappears, for example while a Parlor box's key turns. It also shows the mouse pointer as soon as the main menu loads. |
 | Move speed | Walking and running are 1.2× faster. Slowdowns, drafting and freezes still work, and step costs don't change. |
 | Music volume | Adds a Music slider under the game's volume control (Settings → Volume). F11 mutes music. Sound effects and ambience aren't affected. |
 
@@ -76,13 +78,15 @@ Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The fi
 | `RunStats_Show*` | various | Turn each stat on or off (rooms, rank, colours, dead ends, digs, items, doors, steps…). |
 | `RunStats_LowStepsThreshold` | `10` | Show steps in red at or below this. |
 | `BootSkip_MenuFadeIn` | `0.5` | Main menu fade-in time in seconds (vanilla: 4). |
+| `BootSkip_HideLogos` | `true` | Skip the logos completely (off: they flash by). |
 | `PickupSkip_SkipFoundCards` / `_SkipShopCards` / `_SkipDigShopCards` | `true` / `true` / `false` | Which cards to skip (*DigShop* = "You Dug Up" cards). |
 | `PickupSkip_UnfreezeKey` | `F9` | Emergency unfreeze. |
+| `PickupSkip_CardExitSpeed` | `4` | How much faster a card you click away slides off the screen (1 = vanilla). |
 | `Terminal_InstantText` / `_FastWaits` / `_MaxPause` | `true` / `true` / `0.5` | |
 | `Terminal_NumberKeys` / `_ShowNumbers` / `_BackKeys` / `_EscapeClosesTerminal` | `true` | Keyboard controls. |
 | `CameraZoom_Speed` | `4` | Zoom speed multiplier (1 = vanilla, 0 = instant). |
-| `CameraZoom_Terminals` / `_DiningRoom` / `_UtilityPanel` / `_EatFade` | `true` | What to speed up. |
-| `CameraZoom_OtherObjects` | `false` | Also speed up the same zoom on safes, dartboards, the Room 46 map, shrines and similar objects. |
+| `CameraZoom_Terminals` / `_DiningRoom` / `_UtilityPanel` / `_SafesAndLocks` / `_DrawingRoomSafe` / `_EatFade` | `true` | What to speed up. |
+| `CameraZoom_OtherObjects` | `false` | Also speed up the same zoom on dartboards, the Room 46 map, shrines and similar objects. |
 | `DoorKeySpeed_Speed` | `4` | Key animation speed (1 = vanilla). |
 | `DoorKeySpeed_Hotkeys` / `_UseKey` / `_ExitKey` | `false` / `Return` / `Backspace` | Keyboard USE/EXIT on the lock prompt. |
 | `SecretGarden_Speed` | `4` | Crank sequence speed (1 = vanilla, at most 10). |
@@ -90,6 +94,7 @@ Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The fi
 | `ElevatorSpeed_BoilerRoom` / `_ChamberofMirrors` / `_Foundation` / `_Cliff` | `true` | Which elevators to speed up. |
 | `Rotunda_Speed` | `4` | Turn speed (1 = vanilla 10 s, at most 10). |
 | `Rotunda_FadeSound` / `_SoundFadeTime` | `true` / `0.6` | Fade the turning sound out as the room stops; the fade length in seconds. |
+| `Workshop_Speed` | `4` | Speed of the black screen while assembling (1 = vanilla 6 s, at most 10). |
 | `EndOfDay_Speed` / `_StatsAllAtOnce` / `_MorningFade` | `4` / `false` / `true` | |
 | `DareGameOver_MenuDelay` | `3` | Seconds on the Game Over screen before the Main Menu button appears (vanilla: 10). |
 | `DareGameOver_SkipKeys` | `Space,Return,Escape,Mouse0` | Keys that skip the poem. Comma-separated Unity key names; `Mouse0` is left click. Leave empty to turn skipping off. |
@@ -97,6 +102,8 @@ Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The fi
 | `DigSpeed_Speed` / `_XMarksTheSpot` | `4` / `false` | |
 | `StairsWarp_Speed` / `_FadeIn` | `4` / `true` | |
 | `ClickUnlock_Delay` | `0.1` | Seconds before you can click again after being unfrozen. |
+| `ClickUnlock_AfterZooms` | `true` | Also shorten the short lock after leaving a safe, terminal or other zoomed-in object. |
+| `CursorGuard_MainMenu` | `true` | Show the mouse pointer as soon as the main menu loads. |
 | `MoveSpeed_WalkMultiplier` / `_RunMultiplier` | `1.2` / `1.2` | Allowed range: 0.5 to 3. |
 | `MusicVolume_Volume` / `_Muted` / `_MuteKey` | `1.0` / `false` / `F11` | Also adjustable from Settings → Volume. |
 | `MusicVolume_IncludeCutscenes` | `false` | By default, cutscene videos keep their sound while music is turned down. |

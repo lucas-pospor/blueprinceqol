@@ -22,6 +22,11 @@ namespace BluePrinceQoL.Features;
 /// actions are edited directly when the scene is initialised (before the FSM
 /// leaves State 1). The Menu System is rebuilt with the scene, so nothing needs
 /// restoring.
+///
+/// BootSkip_HideLogos (default on): the two logos (Main Camera/Dogubomb in "Logo Slates", Main Camera/Raw Fury in
+/// "State 7") are never switched on: those two ActivateGameObject actions are disabled. The logo objects only run
+/// their own scale tween, nothing else depends on them, and "Activate Main Menu" switches them off anyway. Every
+/// other action in those states (menu music "Go", fades, waits) still runs, so the boot sequence is otherwise unchanged.
 /// </summary>
 public class BootSkipFeature : Feature
 {
@@ -35,11 +40,15 @@ public class BootSkipFeature : Feature
 
     private const float SlateTime = 0.05f;   // waits and fades between logos
     private MelonPreferences_Entry<float> _menuFade;
+    private MelonPreferences_Entry<bool> _hideLogos;
+    private static readonly HashSet<string> LogoObjects = new() { "Dogubomb", "Raw Fury" };
 
     protected override void CreatePrefs()
     {
         _menuFade = Core.Prefs.CreateEntry($"{Name}_MenuFadeIn", 0.5f, "BootSkip: main menu fade-in (s)",
             "Fade-in of the main menu after the logos (vanilla: 1 s delay + 3 s fade).");
+        _hideLogos = Core.Prefs.CreateEntry($"{Name}_HideLogos", true, "BootSkip: hide the logos",
+            "Don't show the Dogubomb and Raw Fury logos at all (otherwise they flash by for a fraction of a second)");
     }
 
     public override void OnSceneLoaded(string sceneName)
@@ -53,7 +62,7 @@ public class BootSkipFeature : Feature
             return;
         }
 
-        int n = 0;
+        int n = 0, hidden = 0;
         var fade = Mathf.Clamp(_menuFade.Value, 0.05f, 4f);
         foreach (var state in fsm.Fsm.States)
         {
@@ -65,6 +74,12 @@ public class BootSkipFeature : Feature
             foreach (var a in state.Actions)
             {
                 if (a == null) continue;
+                if (slate && _hideLogos.Value && a.Enabled && a.TryCast<ActivateGameObject>() is { } ag &&
+                    ag.activate != null && ag.activate.Value)
+                {
+                    var target = fsm.Fsm.GetOwnerDefaultTarget(ag.gameObject);
+                    if (target != null && LogoObjects.Contains(target.name)) { a.Enabled = false; hidden++; continue; }
+                }
                 var wait = a.TryCast<Wait>();
                 if (wait != null && slate && Shorten(wait.time, SlateTime)) n++;
 
@@ -85,7 +100,7 @@ public class BootSkipFeature : Feature
         }
 
         if (n == 0) Core.Log.Warning($"[{Name}] no logo waits/fades found on '{MenuSystem}'; logos unchanged");
-        else Core.Log.Msg($"[{Name}] shortened {n} logo timings");
+        else Core.Log.Msg($"[{Name}] shortened {n} logo timings" + (hidden > 0 ? $", logos hidden ({hidden})" : ""));
     }
 
     // Only literal values (never a shared FSM variable), and only ever shorter.

@@ -48,7 +48,7 @@ public class CameraZoomFeature : Feature
 {
     public override string Name => "CameraZoom";
     protected override string Description =>
-        "Faster camera zoom onto terminals, the Dining Room plate and the Utility Closet fuse box (optionally safes, darts, maps ...)";
+        "Faster camera zoom onto terminals, the Dining Room plate, the Utility Closet fuse box and the Drawing Room safe (optionally safes, darts, maps ...)";
 
     private const string PlayerObject = "FPSController - Prince";
     private const string PlayerTweenState = "State 3";
@@ -60,17 +60,28 @@ public class CameraZoomFeature : Feature
     private const string PanelCollider = "Fuse Box - First Collider";
     private const string PanelDoor = "S FuseboxDoor";
     private const float PanelResetTime = 15f; // zoom-out follow -> "Reset" must follow within this
+    // Drawing Room/_GAMEPLAY/L1 Candlestick Handle/Trigger
+    private const string CandleTrigger = "Trigger";
+    private const string CandleRoot = "L1 Candlestick Handle";
+    private const string CandlePullState = "The Pull down";
+    // Wall safes (Study, Boudoir, Office, Drawing Room: ".../Digits (1)" or ".../Digits", click target "First Collider")
+    // and the Watch Tower letter lock.
+    private const string SafeOpenState = "OPEN + SPAWN";
+    private const string LetterLock = "Letters Lock Secret Tunnel";
+    private const float SafeMaxConstWait = 2f;  // a constant follow-up wait longer than this covers something else
+    private static readonly HashSet<string> FreezeEvents = new()
+        { "CamTarget", "CamWarp", "QuickUnfreeze", "UnFreeze", "Freeze", "QuickFreeze", "InvisFreeze", "Camfreeze" };
 
     private const float Eps = 0.0001f;   // > 0: Wait/tween finishes on its next update
-    private const float Margin = 0.05f;  // sender wait is always this much longer than the tween
+    private const float Margin = 0.03f;  // sender wait is always this much longer than the tween (2 frames at 60 fps)
     private const float FovMin = 0.05f;  // never ask the FOV offset animation for a zero-length fade
     private const float ArmTime = 1.5f;  // sender -> player "State 3" must follow within this (real time)
 
     private MelonPreferences_Entry<float> _speed;
-    private MelonPreferences_Entry<bool> _instant, _terminals, _dining, _eatFade, _utility, _other;
+    private MelonPreferences_Entry<bool> _instant, _terminals, _dining, _eatFade, _utility, _candle, _safes, _other;
 
-    private enum Scope { None, Terminal, Dining, Utility, Other }
-    private enum Kind { None, PlayerTween, PlayerOther, ComputerRoot, Sender, DiningFade, PanelDelay, PanelDoor }
+    private enum Scope { None, Terminal, Dining, Utility, Candle, Safe, Other }
+    private enum Kind { None, PlayerTween, PlayerOther, ComputerRoot, Sender, DiningFade, PanelDelay, PanelDoor, CandleTweens, SafeOpen }
 
     private sealed class Info
     {
@@ -106,6 +117,7 @@ public class CameraZoomFeature : Feature
     // Panel "Reset": scaled on its next entry, only after a covered zoom-out.
     private IntPtr _resetState;
     private Wait _resetWait;
+    private Scope _resetScope;
     private float _resetUntil = -1f;
 
     private bool _tweenActive;
@@ -126,6 +138,11 @@ public class CameraZoomFeature : Feature
             "Also speed up the 2 s fade to black + 2 s fade back when eating in the Dining Room");
         _utility = Core.Prefs.CreateEntry("CameraZoom_UtilityPanel", true, "CameraZoom: Utility Closet panel",
             "Utility Closet fuse box / breaker panel: zoom in/out, its door, and the waits that cover the zoom-out");
+        _candle = Core.Prefs.CreateEntry("CameraZoom_DrawingRoomSafe", true, "CameraZoom: Drawing Room safe",
+            "Drawing Room candlestick: the handle pull, the zoom onto the safe and the panel sliding up to reveal it");
+        _safes = Core.Prefs.CreateEntry("CameraZoom_SafesAndLocks", true, "CameraZoom: safes and locks",
+            "Wall safes (Study, Boudoir, Office, Drawing Room) and the Watch Tower letter lock: zoom in and out, and the " +
+            "handle/door animation after the right code, before the camera pulls back");
         _other = Core.Prefs.CreateEntry("CameraZoom_OtherObjects", false, "CameraZoom: other objects",
             "Also speed up identical zooms elsewhere (wall safes, dartboards, Room 46 map, Lab machine, Shrine/Curse menus ...)");
         FsmHooks.BeforeEnter += OnBeforeEnter;
@@ -161,6 +178,8 @@ public class CameraZoomFeature : Feature
             Scope.Terminal => _terminals.Value,
             Scope.Dining => _dining.Value,
             Scope.Utility => _utility.Value,
+            Scope.Candle => _candle.Value,
+            Scope.Safe => _safes.Value,
             Scope.Other => _other.Value,
             _ => false,
         };
@@ -205,6 +224,12 @@ public class CameraZoomFeature : Feature
                 break;
             case Kind.PanelDoor:
                 if (Active(Scope.Utility)) ScaleDoor(state);
+                break;
+            case Kind.CandleTweens:
+                if (Active(Scope.Candle)) ScaleCandleTweens(state);
+                break;
+            case Kind.SafeOpen:
+                if (Active(Scope.Safe)) ScaleCandleTweens(state);  // same: DOTween durations and delays, read on entry
                 break;
         }
     }
@@ -320,6 +345,7 @@ public class CameraZoomFeature : Feature
         var dur = _tweenDur;
         var after = _armAfter;
         var afterWait = _armAfterWait;
+        var scope = _armScope;
         var f = Factor();
         Disarm();
         var t = w?.time;
@@ -337,6 +363,7 @@ public class CameraZoomFeature : Feature
         {
             _resetState = after;
             _resetWait = afterWait;
+            _resetScope = scope;
             _resetUntil = Time.unscaledTime + PanelResetTime;
         }
     }
@@ -345,6 +372,7 @@ public class CameraZoomFeature : Feature
     {
         _resetState = IntPtr.Zero;
         _resetWait = null;
+        _resetScope = Scope.None;
         _resetUntil = -1f;
     }
 
@@ -353,8 +381,9 @@ public class CameraZoomFeature : Feature
     private void ApplyPanelReset(FsmState state)
     {
         var t = _resetWait?.time;
+        var scope = _resetScope;
         ClearReset();
-        if (!IsConst(t) || !Active(Scope.Utility)) return;
+        if (!IsConst(t) || !Active(scope)) return;
         var orig = t.Value;
         var target = Math.Max(orig * Factor(), Eps);
         if (target >= orig) return;
@@ -405,6 +434,33 @@ public class CameraZoomFeature : Feature
                 if (target >= orig) continue;
                 AddRestore(_restoreOnEntry, state.Pointer, rt.duration, orig);
                 rt.duration.Value = target;
+            }
+        }
+    }
+
+    // Drawing Room candlestick: "The Pull down" turns the handle (DOTween rotate 2 s, its finish event leads
+    // to the zoom); the zoom's follow-up "Camera Move 2" slides the panel up to reveal the safe (DOTween move
+    // 2.5 s after a 1.5 s delay, no finish event) while it waits for the camera ($CamDistance, 4 s), so in
+    // vanilla the panel stops exactly when control comes back. Both are read on entry: scale them by the
+    // zoom factor and put them back once the state's actions have started. The follow-up's wait is scaled
+    // by the usual sender/follow-up logic, so the panel still ends before the unfreeze.
+    private void ScaleCandleTweens(FsmState state)
+    {
+        var f = Factor();
+        foreach (var a in state.Actions)
+        {
+            if (a == null || !a.Enabled) continue;
+            FsmFloat dur = null, delay = null;
+            FsmBool speedBased = null;
+            if (a.TryCast<DotweenRotateTransformTo>() is { } rt) { dur = rt.duration; delay = rt.setDelay; speedBased = rt.isSpeedBased; }
+            else if (a.TryCast<DotweenMoveTransformTo>() is { } mt) { dur = mt.duration; delay = mt.setDelay; speedBased = mt.isSpeedBased; }
+            else continue;
+            if (speedBased != null && !speedBased.IsNone && speedBased.Value) continue;
+            foreach (var v in new[] { dur, delay })
+            {
+                if (!IsConst(v) || v.Value <= 0f) continue;
+                AddRestore(_restoreAfter, state.Pointer, v, v.Value);
+                v.Value = Math.Max(v.Value * f, v == delay ? 0f : Eps);
             }
         }
     }
@@ -478,9 +534,9 @@ public class CameraZoomFeature : Feature
             var follow = FollowOf(state, scope);
             if (follow.state == null) return null;
             var info = new Info { Kind = Kind.Sender, Scope = scope, Follow = follow.state.Pointer, FollowWait = follow.wait };
-            if (scope == Scope.Utility && IsConst(follow.wait.time))
+            if ((scope == Scope.Utility && IsConst(follow.wait.time)) || scope == Scope.Safe)
             {
-                var after = PanelResetOf(follow.state);
+                var after = PanelResetOf(follow.state, scope);
                 if (after.state != null) { info.After = after.state.Pointer; info.AfterWait = after.wait; }
             }
             return info;
@@ -492,11 +548,28 @@ public class CameraZoomFeature : Feature
         if (goName == PanelCollider && ScopeOf(fsm, go) == Scope.Utility && HasDelayedSend(state))
             return new Info { Kind = Kind.PanelDelay, Scope = Scope.Utility };
 
+        if (goName.StartsWith("Digits", StringComparison.Ordinal) && fsm.Name == "FSM" && state.Name == SafeOpenState &&
+            ScopeOf(fsm, go) == Scope.Safe)
+            return new Info { Kind = Kind.SafeOpen, Scope = Scope.Safe };
+
+        if (goName == CandleTrigger && IsUnder(go, CandleRoot) && fsm.Name == "FSM" &&
+            (state.Name == CandlePullState || FollowIsCandleZoom(state)))
+            return new Info { Kind = Kind.CandleTweens, Scope = Scope.Candle };
+
         if (goName == PanelDoor && IsUnder(go, PanelRoot) &&
             (HasAction<FloatClamp>(state) || HasAction<DotweenRotateTransformTo>(state)))
             return new Info { Kind = Kind.PanelDoor, Scope = Scope.Utility };
 
         return null;
+    }
+
+    // The candlestick's zoom follow-up: the FINISHED target of the state that sends CamTarget.
+    private static bool FollowIsCandleZoom(FsmState state)
+    {
+        if (state.Fsm?.States == null) return false;
+        foreach (var st in state.Fsm.States)
+            if (st?.Actions != null && SendsCamTarget(st) && FinishedTarget(st)?.Pointer == state.Pointer) return true;
+        return false;
     }
 
     private static bool HasDelayedSend(FsmState state)
@@ -519,7 +592,7 @@ public class CameraZoomFeature : Feature
     // FINISHED to "Reset": SetFsmInt (cursor), SetProperty (re-enable the panel
     // collider) and one constant Wait 0.9 -> "State 3" (QuickUnfreeze). In vanilla
     // 2 + 0.9 s cover the 2.8 s tween; accept "Reset" only if it is exactly that.
-    private static (FsmState state, Wait wait) PanelResetOf(FsmState follow)
+    private static (FsmState state, Wait wait) PanelResetOf(FsmState follow, Scope scope)
     {
         var st = FinishedTarget(follow);
         if (st?.Actions == null) return default;
@@ -535,6 +608,10 @@ public class CameraZoomFeature : Feature
                 continue;
             }
             if (a.TryCast<SetFsmInt>() != null || a.TryCast<SetProperty>() != null) continue;
+            // Safes: Boudoir "Reset 5" is a sequence, Wait 0.8 then QuickUnfreeze (the wait still comes first).
+            if (scope == Scope.Safe && wait != null && st.IsSequence && a.TryCast<SendEvent>() is { } se &&
+                !se.everyFrame && se.sendEvent?.Name == "QuickUnfreeze" && IsConst(se.delay) && se.delay.Value <= 0f)
+                continue;
             return default;
         }
         return IsConst(wait?.time) ? (st, wait) : default;
@@ -566,12 +643,29 @@ public class CameraZoomFeature : Feature
         var n = go.name;
         if (n == "Click Trigger" && OpensTerminal(fsm)) s = Scope.Terminal;
         else if (n == PanelCollider && IsUnder(go, PanelRoot)) s = Scope.Utility;
+        else if (n == CandleTrigger && IsUnder(go, CandleRoot)) s = Scope.Candle;
+        else if (IsSafe(go)) s = Scope.Safe;
         else if ((n == "C - Dining Room Dishes" || n == "Course Trigger" ||
                   (n.StartsWith("C - ", StringComparison.Ordinal) && n.EndsWith("Dish Click", StringComparison.Ordinal)))
                  && FsmHooks.PathOf(go).Contains("Dining Room"))
             s = Scope.Dining;
         _fsmScope[fsm.Pointer] = s;
         return s;
+    }
+
+    // Wall safe keypads ("First Collider" under ".../Digits (1)" or ".../Digits", and the "Digits" FSM itself, which
+    // sends the zoom-out after the right code) and the Watch Tower letter lock.
+    private static bool IsSafe(GameObject go)
+    {
+        var n = go.name;
+        if (n == LetterLock) return true;
+        var parent = go.transform.parent;
+        var digits = n.StartsWith("Digits", StringComparison.Ordinal) ? go.transform
+            : n == "First Collider" && parent != null && parent.name.StartsWith("Digits", StringComparison.Ordinal) ? parent
+            : null;
+        if (digits == null) return false;
+        var path = FsmHooks.PathOf(digits.gameObject);
+        return path.Contains("Safe", StringComparison.OrdinalIgnoreCase);
     }
 
     // Terminal click triggers activate "UI OVERLAY CAM/Computer System" in "Wait for Exit 2".
@@ -622,11 +716,20 @@ public class CameraZoomFeature : Feature
                 var se = a.TryCast<SendEvent>();
                 if (se != null && !se.everyFrame && se.sendEvent?.Name != "CamTarget") continue;
             }
+            // Safes: a SendEvent fired on entry (Office "experiment check 29"); timing unchanged.
+            if (scope == Scope.Safe && a.TryCast<SendEvent>() is { } sse && !sse.everyFrame && IsConst(sse.delay) &&
+                sse.delay.Value <= 0f && !FreezeEvents.Contains(sse.sendEvent?.Name ?? ""))
+                continue;
+            // Candlestick: the follow-up also swaps two objects and slides the panel up (scaled as CandleTweens).
+            if (scope == Scope.Candle && (a.TryCast<ActivateGameObject>() != null || a.TryCast<DotweenMoveTransformTo>() != null))
+                continue;
             return default; // anything else: not a pure camera wait
         }
         if (wait?.time == null) return default;
         if (IsVar(wait.time, CamDistanceVar)) return (st, wait);
         if ((scope == Scope.Dining || scope == Scope.Utility) && IsConst(wait.time)) return (st, wait);
+        // Watch Tower letter lock zoom-in: constant Wait 1.7 before its selector turns on.
+        if (scope == Scope.Safe && IsConst(wait.time) && wait.time.Value <= SafeMaxConstWait) return (st, wait);
         return default;
     }
 

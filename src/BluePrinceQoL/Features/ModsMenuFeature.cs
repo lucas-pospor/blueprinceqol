@@ -110,7 +110,7 @@ public class ModsMenuFeature : Feature
             Options = new()
             {
                 Check("Boot logos", "BootSkip_Enabled",
-                    "Shortens the logo screens when the game starts. Takes effect the next time you start the game."),
+                    "Skips the Dogubomb and Raw Fury logos when the game starts. Takes effect the next time you start the game."),
                 Check("Day intro", "IntroSkip_Enabled",
                     "Skips the camera glide at the start of each day, so you start at the gate straight away."),
                 Check("Pickup cards", "PickupSkip_Enabled",
@@ -127,7 +127,7 @@ public class ModsMenuFeature : Feature
             Options = new()
             {
                 Speed("Camera zoom", "CameraZoom_Speed",
-                    "Zooming onto terminals, the Dining Room plate and the Utility Closet fuse box."),
+                    "Zooming in and out of terminals, wall safes, letter locks, the Dining Room plate and the Utility Closet fuse box. Also the safe door opening after the right code."),
                 Speed("Door keys", "DoorKeySpeed_Speed", "The key animation when you unlock a door. You still spend the key only once."),
                 Speed("Digging", "DigSpeed_Speed", "The fade to black when you dig."),
             },

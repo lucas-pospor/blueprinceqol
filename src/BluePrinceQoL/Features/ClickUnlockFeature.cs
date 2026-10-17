@@ -65,6 +65,7 @@ public class ClickUnlockFeature : Feature
 
     private const string UnfreezeState = "UNFROZEN 2";  // "UnFreeze": cards, menus, documents, Great Hall doors
     private const string FadeUnfreezeState = "UNFROZEN 3"; // "FadeUnFreeze": doors after a draft
+    private const string QuickUnfreezeState = "UNFROZEN";  // "QuickUnfreeze": camera zooms (safes, terminals ...), dig cards
 
     private static readonly HashSet<string> GmWaitStates = new() { "State 40", "State 42", "State 43" };
     // Player states in which the world is clickable again (Camera.main = player camera).
@@ -75,7 +76,7 @@ public class ClickUnlockFeature : Feature
     private const float FallbackTime = 0.0001f;
 
     private MelonPreferences_Entry<float> _delay;
-    private MelonPreferences_Entry<bool> _afterDrafts, _crosshair, _log;
+    private MelonPreferences_Entry<bool> _afterDrafts, _quick, _crosshair, _log;
 
     private enum Kind { None, Player, Gm }
 
@@ -116,6 +117,9 @@ public class ClickUnlockFeature : Feature
             "Never less than two frames, whatever the value.");
         _afterDrafts = Core.Prefs.CreateEntry("ClickUnlock_AfterDrafts", true, "ClickUnlock: after drafts",
             "Also shorten the 0.4 s lock after walking through a freshly drafted door (still waits for the draft screen to reset)");
+        _quick = Core.Prefs.CreateEntry("ClickUnlock_AfterZooms", true, "ClickUnlock: after zooms",
+            "Also shorten the 0.1 s after a quick unfreeze (leaving a safe, terminal or other zoomed-in object) to two frames, " +
+            "so the crosshair comes back as soon as the camera is back");
         _crosshair = Core.Prefs.CreateEntry("ClickUnlock_Crosshair", true, "ClickUnlock: crosshair",
             "Also bring the crosshair back as soon as clicking works again (Global Manager cursor waits: 1.1 s cards, 0.8 s dig cards, 2 s drafts)");
         _log = Core.Prefs.CreateEntry("ClickUnlock_Log", false, "ClickUnlock: log",
@@ -155,7 +159,8 @@ public class ClickUnlockFeature : Feature
     {
         var name = state.Name;
         // Cheap filter first: every state entry in the game comes through here.
-        var maybePlayer = name == UnfreezeState || name == FadeUnfreezeState || PlayerUnlockedStates.Contains(name);
+        var maybePlayer = name == UnfreezeState || name == FadeUnfreezeState || name == QuickUnfreezeState ||
+                          PlayerUnlockedStates.Contains(name);
         if (!maybePlayer && !GmWaitStates.Contains(name)) return;
 
         var info = InfoOf(state);
@@ -163,6 +168,7 @@ public class ClickUnlockFeature : Feature
         if (info.Wait == null) return;   // a player "unlocked" state, or not ours
         if (!Enabled) return;
         if (info.Kind == Kind.Player && name == FadeUnfreezeState && !_afterDrafts.Value) return;
+        if (info.Kind == Kind.Player && name == QuickUnfreezeState && !_quick.Value) return;
         if (info.Kind == Kind.Gm && !_crosshair.Value) return;
 
         var p = new Pending
@@ -211,7 +217,7 @@ public class ClickUnlockFeature : Feature
         }
 
         if (now - p.Frame < MinFrames) return p;
-        if (Time.time - p.EntryTime < Delay()) return p;
+        if (p.State.Name != QuickUnfreezeState && Time.time - p.EntryTime < Delay()) return p;
 
         var wait = p.Wait;
         var t = wait.time;
@@ -291,7 +297,8 @@ public class ClickUnlockFeature : Feature
 
     private static string Label(Pending p) =>
         p.Kind == Kind.Player
-            ? (p.State.Name == FadeUnfreezeState ? "unlock after draft" : "unlock after unfreeze")
+            ? (p.State.Name == FadeUnfreezeState ? "unlock after draft"
+                : p.State.Name == QuickUnfreezeState ? "unlock after zoom" : "unlock after unfreeze")
             : $"crosshair ({p.State.Name})";
 
     // ---------------------------------------------------------- classifying
@@ -314,7 +321,7 @@ public class ClickUnlockFeature : Feature
         if (go.name == PlayerObject)
         {
             if (FsmHooks.PathOf(go) != PlayerPath) return null;
-            if (name != UnfreezeState && name != FadeUnfreezeState) return new Info { Kind = Kind.Player };
+            if (name != UnfreezeState && name != FadeUnfreezeState && name != QuickUnfreezeState) return new Info { Kind = Kind.Player };
             var w = SoleWait(state, PlayerDoneState);
             if (w == null) WarnShape($"player '{name}'");
             return new Info { Kind = Kind.Player, Wait = w };

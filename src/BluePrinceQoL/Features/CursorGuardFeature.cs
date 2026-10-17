@@ -35,6 +35,11 @@ namespace BluePrinceQoL.Features;
 /// CamTarget, CamWarp; disable/enable/Update when sent to the player) or uses
 /// SetMainCamera, CameraFadeIn/Out or SetMouseCursor2. Those hides belong to a
 /// freeze, a camera move or a fade and stay vanilla.
+///
+/// Main menu (CursorGuard_MainMenu): its MOUSE MANAGER (scene root, FSM "FSM") hides the cursor on start and only
+/// draws one when NewCursor differs from CurrentCursor (both start at 0); the menu rows set NewCursor = 1 (pointer)
+/// once the menu has faded in. So the pointer is gone for a moment after every main menu load. The feature sets
+/// NewCursor = 1 as soon as the manager reaches "Cursor Check", once per load; the manager then draws it as usual.
 /// </summary>
 public class CursorGuardFeature : Feature
 {
@@ -63,7 +68,11 @@ public class CursorGuardFeature : Feature
     private static readonly HashSet<string> ExcludingActions = new()
         { "SetMainCamera", "CameraFadeOut", "CameraFadeIn", "SetMouseCursor2" };
 
-    private MelonPreferences_Entry<bool> _log;
+    private MelonPreferences_Entry<bool> _log, _mainMenu;
+    private const string MenuMouseManager = "MOUSE MANAGER";
+    private const string MenuIdleState = "Cursor Check";
+    private const int MenuPointer = 1;
+    private float _menuUntil = -1f;   // main menu: look for the mouse manager until then
 
     private sealed class Plan
     {
@@ -90,6 +99,8 @@ public class CursorGuardFeature : Feature
 
     protected override void CreatePrefs()
     {
+        _mainMenu = Core.Prefs.CreateEntry("CursorGuard_MainMenu", true, "CursorGuard: main menu pointer",
+            "Show the mouse pointer as soon as the main menu loads (the game hides it until the menu has faded in)");
         _log = Core.Prefs.CreateEntry("CursorGuard_Log", false, "CursorGuard: log",
             "Log every hidden-cursor write that is turned into the crosshair (the first 3 are always logged)");
         FsmHooks.BeforeEnter += OnBeforeEnter;
@@ -102,6 +113,7 @@ public class CursorGuardFeature : Feature
         _fsmExcluded.Clear();
         _playerFsm = null;
         _nextPlayerSearch = 0f;
+        _menuUntil = sceneName == "Main Menu" ? Time.unscaledTime + 15f : -1f;
     }
 
     // ------------------------------------------------------------------ hooks
@@ -154,6 +166,7 @@ public class CursorGuardFeature : Feature
 
     public override void OnUpdate()
     {
+        if (_menuUntil >= 0f) MenuPointerOnce();
         if (_pending.Count == 0) return;
         bool free = PlayerFree();
         _tmp.Clear();
@@ -166,6 +179,22 @@ public class CursorGuardFeature : Feature
             if (!free || active == null || active.Pointer != p.State.Pointer) _tmp.Add(kv.Key);
         }
         foreach (var k in _tmp) Restore(k, _pending[k]);
+    }
+
+    private void MenuPointerOnce()
+    {
+        if (!_mainMenu.Value || Time.unscaledTime > _menuUntil) { _menuUntil = -1f; return; }
+        GameObject go = null;
+        foreach (var g in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+            if (g != null && g.name == MenuMouseManager) { go = g; break; }
+        var fsm = FsmUtil.Get(go);
+        if (fsm == null || fsm.ActiveStateName != MenuIdleState) return;  // still hiding it on start
+        _menuUntil = -1f;
+        var cur = FsmUtil.Int(fsm, "NewCursor");
+        var shown = FsmUtil.Int(fsm, "CurrentCursor");
+        if (cur == null || shown == null || cur.Value != 0 || shown.Value != 0) return;  // the menu already set one
+        cur.Value = MenuPointer;
+        if (_log.Value) Core.Log.Msg($"[{Name}] main menu pointer shown at once");
     }
 
     // ------------------------------------------------------------- restore

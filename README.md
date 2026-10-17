@@ -51,19 +51,41 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 
 ## Installation
 
-1. Install MelonLoader 0.7.3 or later (IL2CPP, x64) into the game folder. The easiest way is the [MelonLoader installer](https://github.com/LavaGang/MelonLoader/releases) pointed at `BLUE PRINCE.exe`. Start the game once so MelonLoader can finish setting up, then close it.
-2. Download `BluePrinceQoL.dll` from the [Releases](../../releases) page.
-3. Put it in the game's `Mods` folder, e.g. `…/steamapps/common/Blue Prince/Mods/BluePrinceQoL.dll`.
-4. Start the game. The MelonLoader log (`MelonLoader/Latest.log`) should list Blue Prince QoL.
+Pick one of these three ways.
+
+### With r2modman
+
+1. Install [r2modman](https://thunderstore.io/c/blue-prince/p/ebkr/r2modman/) or the Thunderstore App and pick Blue Prince.
+2. Download Blue Prince QoL. r2modman installs MelonLoader along with it.
+3. Click Start modded. The first launch takes a minute or two while MelonLoader sets itself up.
+
+### All-in-one download
+
+Use this if MelonLoader isn't installed yet.
+
+1. Download `BluePrinceQoL-<version>-with-MelonLoader.zip` from the [Releases](../../releases) page.
+2. Extract it into the game folder, the one with `BLUE PRINCE.exe`. In Steam, right-click Blue Prince and choose Manage → Browse local files.
+3. Start the game. The first launch takes a minute or two while MelonLoader sets itself up.
+
+The zip includes [MelonLoader](https://github.com/LavaGang/MelonLoader) 0.7.3 (Apache 2.0 license), with its console window and start screen turned off.
+
+### Mod only
+
+If MelonLoader 0.7.3 or later is already installed, download `BluePrinceQoL-<version>.zip` from the [Releases](../../releases) page and extract it into the game folder. It only contains `Mods/BluePrinceQoL.dll`.
+
+To install MelonLoader yourself, run the [MelonLoader installer](https://github.com/LavaGang/MelonLoader/releases), point it at `BLUE PRINCE.exe`, then start the game once.
 
 ### Linux / Steam Deck (Proton)
 
-- Set the Steam launch options to `WINEDLLOVERRIDES="version=n,b" %command%` so Proton loads MelonLoader.
-- Under Proton, MelonLoader's console window and start screen can freeze the game while it loads. In `UserData/Loader.cfg` (created after the first launch), set:
-  ```toml
-  hide_console = true
-  disable_start_screen = true
-  ```
+Set the game's Steam launch options to:
+
+```
+WINEDLLOVERRIDES="winhttp,version=n,b" %command% --melonloader.hideconsole --melonloader.disablestartscreen
+```
+
+The first part makes Proton load MelonLoader. The two options at the end turn off MelonLoader's console window and start screen, which can freeze the game while it loads under Proton. Use the same launch options whichever way you installed.
+
+To check that the mod loaded, look for Blue Prince QoL in `MelonLoader/Latest.log`.
 
 ## Configuration
 

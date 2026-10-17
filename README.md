@@ -12,7 +12,7 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 
 | Feature | What it does |
 |---|---|
-| Mods menu | Settings → MODS, in both the main menu and the pause menu, lists the mod's options on seven pages, with checkboxes for features and sliders for speeds, in the game's own style. Changes are saved right away. |
+| Mods menu | Settings → MODS, in both the main menu and the pause menu, lists the mod's options on eight pages, with checkboxes for features and sliders for speeds, in the game's own style. Changes are saved right away. |
 | Quit without saving | A QUIT WITHOUT SAVING option under SAVE & QUIT in the pause menu. After a confirmation it returns to the main menu without saving, so Continue starts the same day again. Everything from that day is lost, including permanent unlocks. Steam achievements stay unlocked. |
 | HUD | Shows the in-game day, calendar date and time at the top of the screen, in the game's own font with sun and clock icons. It matches the wall clocks. F8 shows or hides it. |
 | Run stats *(hidden by default)* | A second line with today's run: rooms drafted, rank, rooms by colour, dead ends, digs, items, unexplored doors, and a low-steps warning. F10 shows or hides it. |
@@ -26,6 +26,8 @@ Most of the mod removes waiting: shorter animations, fades and lock-outs that yo
 | Elevators | Rides in the Boiler Room, Chamber of Mirrors, Foundation and cliff elevators are 3× faster. The whole game runs faster for the length of the ride, so everything stays in sync. Elevator sounds play at normal speed. |
 | Rotunda | The Rotunda turns 4× faster, and the gears turn with it. The turning sound fades out as the room stops. |
 | Workshop | The black screen while an item is assembled at the Workshop table is 4× shorter, and the assembly sound fades out with it. |
+| Office safe | The bust in the Office that rises to reveal the safe moves 4× faster, and its rumble ends with it. |
+| Security room scene *(off by default)* | Skips the scene the first time you enter the Security room: the room behaves like one you've already visited, with no fade, no move to the middle of the room and no video. Turn it on in MODS → Cutscenes. |
 | End of day | The end-of-day fades and diary reveal are 4× faster. The Save & Continue screens still wait for you. |
 | Dare game over | In Dare mode, the Main Menu button on the Game Over screen shows up after 3 seconds instead of 10, and the fades around it are shorter. Press Space, Enter, Esc or click during the poem to skip ahead to the Game Over screen. |
 | Digging | Shorter fade to black when digging. |
@@ -95,6 +97,8 @@ Settings are in `UserData/MelonPreferences.cfg`, under `[BluePrinceQoL]`. The fi
 | `Rotunda_Speed` | `4` | Turn speed (1 = vanilla 10 s, at most 10). |
 | `Rotunda_FadeSound` / `_SoundFadeTime` | `true` / `0.6` | Fade the turning sound out as the room stops; the fade length in seconds. |
 | `Workshop_Speed` | `4` | Speed of the black screen while assembling (1 = vanilla 6 s, at most 10). |
+| `OfficeCompartment_Speed` | `4` | Speed of the Office bust rising (1 = vanilla 8 s, at most 10). |
+| `SecurityVideo_Enabled` | `false` | Skip the first Security room scene (story content, so off by default). |
 | `EndOfDay_Speed` / `_StatsAllAtOnce` / `_MorningFade` | `4` / `false` / `true` | |
 | `DareGameOver_MenuDelay` | `3` | Seconds on the Game Over screen before the Main Menu button appears (vanilla: 10). |
 | `DareGameOver_SkipKeys` | `Space,Return,Escape,Mouse0` | Keys that skip the poem. Comma-separated Unity key names; `Mouse0` is left click. Leave empty to turn skipping off. |

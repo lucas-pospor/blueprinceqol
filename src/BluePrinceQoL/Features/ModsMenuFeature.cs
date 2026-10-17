@@ -39,7 +39,7 @@ namespace BluePrinceQoL.Features;
 /// then Main Camera back, the menu frame lines and "Settings" line on, Settings list on (its FSM re-enables its
 /// selector and BACK BUTTON), screen off.
 ///
-/// Seven pages of checkboxes and sliders.
+/// Eight pages of checkboxes and sliders.
 /// </summary>
 public class ModsMenuFeature : Feature
 {
@@ -117,8 +117,6 @@ public class ModsMenuFeature : Feature
                     "Skips item pickup animations and the You Found and You Bought cards. Items are granted as normal. F9 unfreezes you if you ever get stuck."),
                 Check("Click unlock", "ClickUnlock_Enabled",
                     "Lets you click again right after pickups, menus and doors instead of waiting about a second."),
-                Check("Skip Dare poem", "DareGameOver_AutoSkip",
-                    "Always skips the poem in the Dare mode Game Over scene. Without this, press Space, Enter, Esc or click to skip it."),
             },
         },
         new Page
@@ -168,6 +166,21 @@ public class ModsMenuFeature : Feature
                 Check("Stats all at once", "EndOfDay_StatsAllAtOnce",
                     "The diary's stat rows appear together instead of one after another."),
                 Check("Morning fade", "EndOfDay_MorningFade", "Also shortens the fade at the start of the next day."),
+            },
+        },
+        new Page
+        {
+            Title = "CUTSCENES", Intro = "Story scenes and longer animations.",
+            Options = new()
+            {
+                Speed("Workshop", "Workshop_Speed",
+                    "The black screen while an item is assembled at the Workshop table. 1.0 is the game's normal speed."),
+                Speed("Office safe", "OfficeCompartment_Speed",
+                    "The bust in the Office rising to reveal the safe. 1.0 is the game's normal speed."),
+                Check("Security scene", "SecurityVideo_Enabled",
+                    "Skips the scene that plays the first time you enter the Security room. It only plays once per save."),
+                Check("Skip Dare poem", "DareGameOver_AutoSkip",
+                    "Always skips the poem in the Dare mode Game Over scene. Without this, press Space, Enter, Esc or click to skip it."),
             },
         },
         new Page
